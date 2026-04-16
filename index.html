@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ozymandias — Percy Bysshe Shelley</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+  <style>
+    :root {
+      --void:   #050302;
+      --gold:   #c9a84c;
+      --gold-l: #f0c060;
+      --gold-d: #8b6520;
+      --sand-p: #f5e6c8;
+      --stone:  #8b7355;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--void);
+      color: var(--sand-p);
+      font-family: 'Crimson Text', serif;
+      cursor: none;
+      overflow-x: hidden;
+    }
+
+    /* Grain */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 200; pointer-events: none;
+      opacity: 0.04;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    }
+
+    /* Cursor */
+    #cur-ring {
+      position: fixed; width: 28px; height: 28px;
+      border: 1.5px solid var(--gold); border-radius: 50%;
+      pointer-events: none; z-index: 300;
+      transform: translate(-50%,-50%); mix-blend-mode: screen;
+    }
+    #cur-dot {
+      position: fixed; width: 5px; height: 5px;
+      background: var(--gold-l); border-radius: 50%;
+      pointer-events: none; z-index: 300;
+      transform: translate(-50%,-50%);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: var(--void); }
+    ::-webkit-scrollbar-thumb { background: linear-gradient(var(--gold-d), var(--gold), var(--gold-d)); border-radius: 2px; }
+
+    /* Loading */
+    #loading {
+      position: fixed; inset: 0; z-index: 500; background: var(--void);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
+    }
+    #ld-title {
+      font-family: 'Playfair Display', serif; font-size: clamp(2rem,8vw,5rem);
+      font-weight: 900; color: var(--gold); letter-spacing: 0.25em;
+    }
+    #ld-sub { font-size: 0.85rem; letter-spacing: 0.45em; text-transform: uppercase; color: var(--stone); }
+    #ld-bar-wrap { width: 200px; height: 1.5px; background: rgba(139,101,32,0.2); overflow: hidden; }
+    #ld-bar { height: 100%; width: 0; background: linear-gradient(90deg, var(--gold-d), var(--gold-l), var(--gold-d)); }
+
+    /* Global sand */
+    #global-sand { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+
+    /* Site content */
+    #site { position: relative; z-index: 2; }
+
+    /* ─── HERO ─────────────────────────────────── */
+    #hero {
+      position: relative; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      overflow: hidden; padding: 0 3rem;
+    }
+    #hero-canvas { position: absolute; inset: 0; z-index: 0; }
+    .hero-fg { position: relative; z-index: 1; text-align: center; }
+    #main-title {
+      font-family: 'Playfair Display', serif; font-weight: 900;
+      color: var(--gold); letter-spacing: 0.06em; line-height: 1;
+      white-space: nowrap; display: block;
+      text-shadow: 0 0 80px rgba(201,168,76,0.4), 0 2px 6px rgba(0,0,0,0.9);
+    }
+    .hero-byline {
+      margin-top: 1.2rem; font-size: clamp(0.9rem,1.8vw,1.1rem);
+      letter-spacing: 0.5em; text-transform: uppercase; color: var(--stone);
+    }
+    .hero-year {
+      margin-top: 0.5rem; font-size: 0.82rem;
+      letter-spacing: 0.3em; color: var(--gold-d);
+    }
+    .hero-cue {
+      position: absolute; bottom: 2.5rem; left: 50%;
+      transform: translateX(-50%); z-index: 1;
+      display: flex; flex-direction: column; align-items: center; gap: 0.6rem;
+      font-size: 0.68rem; letter-spacing: 0.4em; text-transform: uppercase; color: var(--gold-d);
+    }
+    .hero-cue::after {
+      content: ''; display: block; width: 1px; height: 38px;
+      background: linear-gradient(var(--gold-d), transparent);
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:.35} 50%{opacity:1} }
+
+    /* Dune SVG */
+    .dune { position: relative; z-index: 1; margin-top: -2px; line-height: 0; }
+    .dune svg { width: 100%; display: block; }
+
+    /* Separator */
+    .sep {
+      width: 100%; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold-d) 25%, var(--gold) 50%, var(--gold-d) 75%, transparent);
+      opacity: 0.35;
+    }
+
+    /* ─── POEM SECTIONS ────────────────────────── */
+    .poem-section {
+      position: relative; min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; perspective: 1200px;
+    }
+
+    /* Background image layer */
+    .sec-bg {
+      position: absolute; inset: 0; z-index: 0; overflow: hidden;
+    }
+    .sec-bg img, .sec-bg video {
+      width: 100%; height: 100%; object-fit: cover;
+      display: block; will-change: transform;
+    }
+
+    /* Edge-fade overlay — seamlessly blends image into the dark background */
+    .sec-overlay {
+      position: absolute; inset: 0; z-index: 1; pointer-events: none;
+      background:
+        linear-gradient(to bottom, var(--void) 0%, rgba(5,3,2,0.35) 20%,
+          rgba(5,3,2,0.35) 80%, var(--void) 100%),
+        linear-gradient(to right,  var(--void) 0%, transparent 15%,
+          transparent 85%, var(--void) 100%);
+    }
+
+    /* Tiny replace-image button */
+    .replace-btn {
+      position: absolute; bottom: 1.2rem; right: 1.2rem; z-index: 10;
+      width: 34px; height: 34px; border: 1px solid rgba(201,168,76,0.25);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: border-color .3s, color .3s;
+      color: rgba(201,168,76,0.25); font-size: 1.3rem; line-height: 1;
+    }
+    .replace-btn:hover { border-color: var(--gold); color: var(--gold); }
+    .replace-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+
+    /* Content over image */
+    .sec-content {
+      position: relative; z-index: 2; text-align: center;
+      max-width: 820px; width: 100%; padding: 4rem 2rem;
+      transform-style: preserve-3d;
+    }
+    .act-label {
+      display: inline-block;
+      font-size: 0.82rem; letter-spacing: 0.55em; text-transform: uppercase;
+      color: var(--gold-l); margin-bottom: 1.4rem;
+      padding: 0.42em 1.5em;
+      background: rgba(5,3,2,0.72);
+      border: 1px solid rgba(201,168,76,0.3);
+      border-radius: 1px;
+      text-shadow: 0 1px 10px rgba(5,3,2,1);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+    .act-rule {
+      width: 48px; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      margin: 0 auto 2.8rem; opacity: 0.7;
+    }
+    .poem-block { text-align: center; }
+    .poem-line {
+      display: block; font-family: 'Crimson Text', serif; font-style: italic;
+      font-size: clamp(1.25rem, 3.2vw, 2.05rem); line-height: 1.9;
+      color: var(--sand-p); position: relative; overflow: hidden;
+      text-shadow: 0 2px 28px rgba(5,3,2,0.95), 0 0 60px rgba(5,3,2,0.8);
+      will-change: opacity, filter, transform;
+    }
+
+    /* Gold shimmer bar — injected & animated by JS */
+    .shimmer-bar {
+      position: absolute; top: -3px; bottom: -3px; left: 0; width: 55%;
+      background: linear-gradient(90deg,
+        transparent 0%, rgba(240,192,96,0) 18%,
+        rgba(240,192,96,0.45) 42%, rgba(255,235,140,0.7) 50%,
+        rgba(240,192,96,0.45) 58%, rgba(240,192,96,0) 82%, transparent 100%);
+      mix-blend-mode: screen; pointer-events: none; z-index: 1;
+      will-change: transform;
+    }
+
+    /* ─── INSCRIPTION ──────────────────────────── */
+    #inscription {
+      position: relative; min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; padding: 4rem 2rem; perspective: 1200px;
+    }
+    #inscription .sec-overlay {
+      background:
+        linear-gradient(to bottom, var(--void) 0%, rgba(5,3,2,0.2) 25%,
+          rgba(5,3,2,0.2) 75%, var(--void) 100%),
+        linear-gradient(to right, var(--void) 0%, transparent 12%, transparent 88%, var(--void) 100%);
+    }
+    .insc-content {
+      position: relative; z-index: 2; text-align: center; max-width: 800px;
+      transform-style: preserve-3d;
+    }
+    .insc-label {
+      display: inline-block;
+      font-size: 0.82rem; letter-spacing: 0.55em; text-transform: uppercase;
+      color: var(--gold-l); margin-bottom: 1.5rem;
+      padding: 0.42em 1.5em;
+      background: rgba(5,3,2,0.72);
+      border: 1px solid rgba(201,168,76,0.3);
+      border-radius: 1px;
+      text-shadow: 0 1px 10px rgba(5,3,2,1);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+    .insc-quote {
+      font-family: 'Playfair Display', serif; font-style: italic;
+      font-size: clamp(1.6rem, 4.5vw, 3.2rem); color: var(--gold-l);
+      line-height: 1.7;
+      text-shadow: 0 0 60px rgba(240,192,96,0.45), 0 2px 30px rgba(5,3,2,0.95);
+    }
+    .insc-attr {
+      margin-top: 1.5rem; font-size: 0.82rem; letter-spacing: 0.35em;
+      text-transform: uppercase; color: var(--gold-d);
+    }
+
+    /* ─── FULL POEM ────────────────────────────── */
+    #full-poem {
+      padding: 8rem 2rem 10rem;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    #full-poem .fp-title {
+      font-family: 'Playfair Display', serif; font-weight: 900;
+      font-size: clamp(2rem, 5vw, 4rem); color: var(--gold);
+      letter-spacing: 0.15em; text-align: center; margin-bottom: 0.4rem;
+    }
+    #full-poem .fp-author {
+      text-align: center; font-size: 0.85rem; letter-spacing: 0.4em;
+      text-transform: uppercase; color: var(--stone); margin-bottom: 3.5rem;
+    }
+    #full-poem .fp-rule {
+      width: 44px; height: 1px; background: var(--gold-d); margin: 0 auto 3.5rem;
+    }
+    #full-poem .poem-line {
+      font-size: clamp(1.1rem, 2.2vw, 1.4rem); line-height: 2.2;
+      text-align: center; text-shadow: none;
+    }
+    #full-poem .poem-line.hl { color: var(--gold-l); }
+
+    /* Footer */
+    footer {
+      padding: 2.5rem 2rem; text-align: center;
+      font-size: 0.75rem; letter-spacing: 0.35em; text-transform: uppercase;
+      color: var(--gold-d); border-top: 1px solid rgba(139,101,32,0.18);
+    }
+
+    @media (max-width: 640px) {
+      .poem-line { font-size: 1.15rem; }
+      .insc-quote { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading">
+  <div id="ld-title">OZYMANDIAS</div>
+  <div id="ld-sub">Percy Bysshe Shelley &middot; 1818</div>
+  <div id="ld-bar-wrap"><div id="ld-bar"></div></div>
+</div>
+
+<canvas id="global-sand"></canvas>
+<div id="cur-ring"></div>
+<div id="cur-dot"></div>
+
+<div id="site">
+
+  <!-- ═══════════ HERO ═══════════ -->
+  <section id="hero">
+    <canvas id="hero-canvas"></canvas>
+    <div class="hero-fg">
+      <span id="main-title">OZYMANDIAS</span>
+      <div class="hero-byline">Percy Bysshe Shelley</div>
+      <div class="hero-year">1818 &middot; English 1102</div>
+    </div>
+    <div class="hero-cue">Scroll</div>
+  </section>
+
+  <div class="dune">
+    <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+      <path d="M0,80 L0,50 Q140,8 280,38 Q420,68 560,32 Q700,-4 840,28 Q980,60 1120,24 Q1280,-8 1440,36 L1440,80 Z" fill="#050302"/>
+      <path d="M0,80 L0,64 Q200,32 400,56 Q600,80 800,50 Q1000,20 1200,46 Q1350,65 1440,50 L1440,80 Z" fill="#080503" opacity="0.6"/>
+    </svg>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- ═══════════ ACT I : THE TRAVELLER ═══════════ -->
+  <section class="poem-section" id="act1">
+    <div class="sec-bg" id="bg1">
+      <img src="maxresdefault.jpg" alt="Vast sand dunes, lone traveller">
+    </div>
+    <div class="sec-overlay"></div>
+    <div class="sec-content" id="sc1">
+      <p class="act-label">I &nbsp;&middot;&nbsp; The Traveller</p>
+      <div class="act-rule"></div>
+      <div class="poem-block">
+        <span class="poem-line">I met a traveller from an antique land,</span>
+        <span class="poem-line">Who said &mdash; &ldquo;Two vast and trunkless legs of stone</span>
+        <span class="poem-line">Stand in the desert&hellip;</span>
+      </div>
+    </div>
+    <label class="replace-btn" title="Replace image"><input type="file" accept="image/*,video/*" onchange="replaceMedia(this)">&#43;</label>
+  </section>
+
+  <div class="sep"></div>
+
+  <!-- ═══════════ ACT II : THE RUINS ═══════════ -->
+  <section class="poem-section" id="act2">
+    <div class="sec-bg" id="bg2">
+      <img src="image.png" alt="Trunkless stone legs in the desert">
+    </div>
+    <div class="sec-overlay"></div>
+    <div class="sec-content" id="sc2">
+      <p class="act-label">II &nbsp;&middot;&nbsp; The Ruins</p>
+      <div class="act-rule"></div>
+      <div class="poem-block">
+        <span class="poem-line">&hellip; Near them, on the sand,</span>
+        <span class="poem-line">Half sunk a shattered visage lies, whose frown,</span>
+        <span class="poem-line">And wrinkled lip, and sneer of cold command,</span>
+        <span class="poem-line">Tell that its sculptor well those passions read</span>
+        <span class="poem-line">Which yet survive, stamped on these lifeless things,</span>
+        <span class="poem-line">The hand that mocked them, and the heart that fed;</span>
+      </div>
+    </div>
+    <label class="replace-btn" title="Replace image"><input type="file" accept="image/*,video/*" onchange="replaceMedia(this)">&#43;</label>
+  </section>
+
+  <div class="sep"></div>
+
+  <!-- ═══════════ ACT III : THE PEDESTAL ═══════════ -->
+  <section class="poem-section" id="act3">
+    <div class="sec-bg" id="bg3">
+      <img src="54222314-d1ce-4a44-8420-7a37ac7a14d8_rwc_179x0x1066x800x1066.png" alt="Fallen stone head, lone figure in moonlit desert">
+    </div>
+    <div class="sec-overlay"></div>
+    <div class="sec-content" id="sc3">
+      <p class="act-label">III &nbsp;&middot;&nbsp; The Pedestal</p>
+      <div class="act-rule"></div>
+      <div class="poem-block">
+        <span class="poem-line">And on the pedestal, these words appear:</span>
+      </div>
+    </div>
+    <label class="replace-btn" title="Replace image"><input type="file" accept="image/*,video/*" onchange="replaceMedia(this)">&#43;</label>
+  </section>
+
+  <div class="sep"></div>
+
+  <!-- ═══════════ INSCRIPTION ═══════════ -->
+  <section id="inscription">
+    <div class="sec-bg" id="bg-insc">
+      <img src="DVwvutnWsAIDL6g.jpg" alt="Giant face half-submerged, surrealist landscape" style="object-position: top center;">
+    </div>
+    <div class="sec-overlay"></div>
+    <div class="insc-content" id="insc-c">
+      <p class="insc-label">IV &nbsp;&middot;&nbsp; The Inscription</p>
+      <div class="act-rule" style="margin-bottom:2rem;"></div>
+      <p class="insc-quote">
+        &ldquo;My name is Ozymandias, King of Kings;<br>
+        Look on my Works, ye Mighty, and despair!&rdquo;
+      </p>
+      <p class="insc-attr">&mdash; Shelley, 1818</p>
+    </div>
+    <label class="replace-btn" title="Replace image"><input type="file" accept="image/*,video/*" onchange="replaceMedia(this)">&#43;</label>
+  </section>
+
+  <div class="sep"></div>
+
+  <!-- ═══════════ ACT IV : THE EMPTINESS ═══════════ -->
+  <section class="poem-section" id="act4">
+    <div class="sec-bg" id="bg4">
+      <img src="europe-ozymandias-john-karborn-ink-on-paper-2018-v0-h6qp4w1mxwu21.webp"
+           alt="Giant stone faces dissolving into mist — Karborn 2018" style="object-position: center 20%;">
+    </div>
+    <div class="sec-overlay"></div>
+    <div class="sec-content" id="sc4">
+      <p class="act-label">V &nbsp;&middot;&nbsp; The Emptiness</p>
+      <div class="act-rule"></div>
+      <div class="poem-block">
+        <span class="poem-line">Nothing beside remains.</span>
+        <span class="poem-line">Round the decay</span>
+        <span class="poem-line">Of that colossal Wreck, boundless and bare</span>
+        <span class="poem-line">The lone and level sands stretch far away.</span>
+      </div>
+    </div>
+    <label class="replace-btn" title="Replace image"><input type="file" accept="image/*,video/*" onchange="replaceMedia(this)">&#43;</label>
+  </section>
+
+  <div class="sep"></div>
+
+  <!-- ═══════════ FULL POEM ═══════════ -->
+  <section id="full-poem">
+    <div class="fp-title">Ozymandias</div>
+    <div class="fp-author">Percy Bysshe Shelley &middot; 1818</div>
+    <div class="fp-rule"></div>
+    <div id="fp-body">
+      <span class="poem-line">I met a traveller from an antique land,</span>
+      <span class="poem-line">Who said &mdash; &ldquo;Two vast and trunkless legs of stone</span>
+      <span class="poem-line">Stand in the desert&hellip; Near them, on the sand,</span>
+      <span class="poem-line">Half sunk a shattered visage lies, whose frown,</span>
+      <span class="poem-line">And wrinkled lip, and sneer of cold command,</span>
+      <span class="poem-line">Tell that its sculptor well those passions read</span>
+      <span class="poem-line">Which yet survive, stamped on these lifeless things,</span>
+      <span class="poem-line">The hand that mocked them, and the heart that fed;</span>
+      <span class="poem-line">And on the pedestal, these words appear:</span>
+      <span class="poem-line hl">&lsquo;My name is Ozymandias, King of Kings;</span>
+      <span class="poem-line hl">Look on my Works, ye Mighty, and despair!&rsquo;</span>
+      <span class="poem-line">Nothing beside remains. Round the decay</span>
+      <span class="poem-line">Of that colossal Wreck, boundless and bare</span>
+      <span class="poem-line">The lone and level sands stretch far away.&rdquo;</span>
+    </div>
+  </section>
+
+  <footer>Ozymandias &nbsp;&middot;&nbsp; Percy Bysshe Shelley &nbsp;&middot;&nbsp; 1818 &nbsp;&middot;&nbsp; English 1102</footer>
+
+</div><!-- /site -->
+
+<script>
+/* ================================================================
+   CURSOR
+================================================================ */
+(function(){
+  const ring = document.getElementById('cur-ring');
+  const dot  = document.getElementById('cur-dot');
+  let rx=0, ry=0;
+  document.addEventListener('mousemove', e => {
+    dot.style.left = e.clientX+'px'; dot.style.top = e.clientY+'px';
+  });
+  // Global mouse state for Three.js
+  window._mx = 0; window._my = 0;
+  document.addEventListener('mousemove', e => {
+    window._mx = (e.clientX/innerWidth  - 0.5)*2;
+    window._my = (e.clientY/innerHeight - 0.5)*2;
+    rx += (e.clientX - rx)*0.12; ry += (e.clientY - ry)*0.12;
+    ring.style.left = rx+'px'; ring.style.top = ry+'px';
+  });
+  (function loop(){
+    rx += (parseFloat(dot.style.left||0)-rx)*0.12;
+    ry += (parseFloat(dot.style.top ||0)-ry)*0.12;
+    ring.style.left = rx+'px'; ring.style.top = ry+'px';
+    requestAnimationFrame(loop);
+  })();
+})();
+
+/* ================================================================
+   LOADING
+================================================================ */
+(function(){
+  const bar = document.getElementById('ld-bar');
+  let p = 0;
+  const iv = setInterval(()=>{
+    p += Math.random()*14+2;
+    if(p>=100){ p=100; clearInterval(iv); }
+    bar.style.width = p+'%';
+  }, 55);
+})();
+
+/* ================================================================
+   GLOBAL SAND — 2D canvas, fixed, three depth layers
+================================================================ */
+(function(){
+  const cv = document.getElementById('global-sand');
+  const ctx = cv.getContext('2d');
+  let W, H, t=0, mouseX=0.5;
+
+  document.addEventListener('mousemove', e => { mouseX = e.clientX/innerWidth; });
+
+  function resize(){ W = cv.width = innerWidth; H = cv.height = innerHeight; }
+  window.addEventListener('resize', resize); resize();
+
+  const layers = [
+    { n:1600, spd:0.014, col:[90,48,16],  op:0.36, szMul:0.65 },
+    { n:2200, spd:0.024, col:[176,112,48], op:0.50, szMul:1.0  },
+    { n:700,  spd:0.046, col:[208,152,72], op:0.68, szMul:1.7  }
+  ];
+
+  const pts = [];
+  layers.forEach(l => {
+    for(let i=0;i<l.n;i++) pts.push({
+      x: Math.random()*1.4*innerWidth - 0.2*innerWidth,
+      y: Math.random()*innerHeight,
+      spd: l.spd*(0.7+Math.random()*0.6),
+      sz:  l.szMul*(0.4+Math.random()*0.5),
+      op:  l.op*(0.6+Math.random()*0.8),
+      ph:  Math.random()*Math.PI*2,
+      amp: 0.3+Math.random()*0.9,
+      col: l.col
+    });
+  });
+
+  (function animate(){
+    ctx.clearRect(0,0,W,H);
+    t += 0.011;
+    const wind = 0.65 + mouseX*0.8;
+    pts.forEach(p => {
+      p.x -= p.spd*wind*W*0.001 + Math.cos(p.ph+t*1.1)*p.amp*0.08;
+      p.y += (p.spd*0.18) + Math.sin(p.ph+t*0.8)*p.amp*0.12;
+      if(p.x < -8)   p.x = W+8;
+      if(p.x > W+8)  p.x = -8;
+      if(p.y < -8)   p.y = H+8;
+      if(p.y > H+8)  p.y = -8;
+      const sz = Math.max(0.4, p.sz*W*0.001);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, sz, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(${p.col[0]},${p.col[1]},${p.col[2]},${p.op})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(animate);
+  })();
+})();
+
+/* ================================================================
+   REPLACE MEDIA
+================================================================ */
+function replaceMedia(input){
+  const bg  = input.closest('.sec-bg') || input.closest('section').querySelector('.sec-bg');
+  const file = input.files[0];
+  if(!file) return;
+  const url = URL.createObjectURL(file);
+  const prev = bg.querySelector('img, video');
+  let el;
+  if(file.type.startsWith('video/')){
+    el = document.createElement('video');
+    el.src=url; el.autoplay=true; el.loop=true; el.muted=true; el.playsInline=true;
+  } else {
+    el = document.createElement('img');
+    el.src=url; el.alt='';
+  }
+  el.style.width='100%'; el.style.height='100%'; el.style.objectFit='cover';
+  if(prev) prev.replaceWith(el); else bg.insertBefore(el, bg.firstChild);
+  gsap.fromTo(el, {opacity:0}, {opacity:1, duration:0.9, ease:'power2.out'});
+  setupParallax(el, bg.closest('.poem-section')||bg.closest('section'));
+}
+
+/* ================================================================
+   MAIN INIT
+================================================================ */
+window.addEventListener('load', ()=>{
+  const ldBar = document.getElementById('ld-bar');
+  ldBar.style.transition = 'width 0.35s ease';
+  ldBar.style.width = '100%';
+  setTimeout(()=>{
+    gsap.to('#loading',{opacity:0, duration:0.8, ease:'power2.inOut',
+      onComplete(){ document.getElementById('loading').style.display='none'; init(); }
+    });
+  }, 700);
+});
+
+function init(){
+  gsap.registerPlugin(ScrollTrigger);
+
+  /* ── Fit title ── */
+  function fitTitle(){
+    const el = document.getElementById('main-title');
+    const avail = innerWidth * 0.88;
+    let s = 16; el.style.fontSize = s+'px';
+    while(el.offsetWidth < avail && s<700){ s+=4; el.style.fontSize=s+'px'; }
+    while(el.offsetWidth > avail && s>12){ s-=1; el.style.fontSize=s+'px'; }
+  }
+  document.fonts.ready.then(fitTitle);
+  window.addEventListener('resize', fitTitle);
+
+  /* ── Hero entrance ── */
+  gsap.fromTo('.hero-fg', {opacity:0, y:30}, {opacity:1, y:0, duration:1.4, ease:'power3.out', delay:0.1});
+  gsap.fromTo('.hero-cue',{opacity:0},       {opacity:1, duration:1, delay:1.5});
+
+  /* ── Hero parallax ── */
+  gsap.to('.hero-fg',{ y:-160, ease:'none',
+    scrollTrigger:{ trigger:'#hero', start:'top top', end:'bottom top', scrub:true }
+  });
+
+  /* ── Hero Three.js stars ── */
+  initHeroCanvas();
+
+  /* ── Inject shimmer bars into every poem-line ── */
+  document.querySelectorAll('.poem-line').forEach(line => {
+    const bar = document.createElement('span');
+    bar.className = 'shimmer-bar';
+    line.appendChild(bar);
+  });
+
+  /* ── Poem line animations — gold shimmer + slow opacity ── */
+  document.querySelectorAll('.poem-line').forEach(line => {
+    const bar = line.querySelector('.shimmer-bar');
+    const tl  = gsap.timeline({
+      scrollTrigger:{
+        trigger: line,
+        start: 'top 92%',
+        end:   'top 22%',
+        scrub: 2.5
+      }
+    });
+    // Opacity fade in (takes ~40% of the scroll distance)
+    tl.fromTo(line, {opacity:0.04, filter:'blur(1.2px)'}, {opacity:1, filter:'blur(0px)', duration:0.45, ease:'none'});
+    // Gold shimmer sweeps left → right (starts slightly after, completes before end)
+    tl.fromTo(bar,  {x:'-110%', opacity:1}, {x:'230%', opacity:1, duration:0.75, ease:'sine.inOut'}, 0.08);
+    // Shimmer fades out at the tail
+    tl.to(bar, {opacity:0, duration:0.06}, 0.83);
+  });
+
+  /* ── Section content — 3D entrance ── */
+  document.querySelectorAll('.sec-content').forEach(sc => {
+    gsap.fromTo(sc,
+      { y:90, rotateX:12, opacity:0, transformOrigin:'center bottom' },
+      { y:0,  rotateX:0,  opacity:1,
+        ease:'power3.out',
+        scrollTrigger:{ trigger:sc, start:'top 82%', end:'top 28%', scrub:2 }
+      }
+    );
+  });
+
+  /* ── Inscription 3D entrance ── */
+  gsap.fromTo('#insc-c',
+    { y:70, rotateX:10, opacity:0, transformOrigin:'center bottom' },
+    { y:0,  rotateX:0,  opacity:1,
+      ease:'power3.out',
+      scrollTrigger:{ trigger:'#inscription', start:'top 78%', end:'top 25%', scrub:2 }
+    }
+  );
+
+  /* ── Full poem header ── */
+  gsap.fromTo(['#full-poem .fp-title','#full-poem .fp-author','#full-poem .fp-rule'],
+    { opacity:0, y:25 },
+    { opacity:1, y:0, stagger:0.12, duration:1, ease:'power3.out',
+      scrollTrigger:{ trigger:'#full-poem', start:'top 80%', once:true }
+    }
+  );
+
+  /* ── Image parallax + scale per section ── */
+  document.querySelectorAll('.poem-section, #inscription').forEach(sec => {
+    const img = sec.querySelector('.sec-bg img, .sec-bg video');
+    if(img) setupParallax(img, sec);
+  });
+
+  /* ── Act labels ── */
+  document.querySelectorAll('.act-label, .act-rule, .insc-label').forEach(el => {
+    gsap.fromTo(el,
+      { opacity:0, y:14 },
+      { opacity:1, y:0, duration:1, ease:'power3.out',
+        scrollTrigger:{ trigger:el, start:'top 85%', once:true }
+      }
+    );
+  });
+
+  ScrollTrigger.refresh();
+}
+
+/* ── Image parallax + scale helper ── */
+function setupParallax(img, sec){
+  if(!img||!sec) return;
+  // Parallax: image moves opposite to scroll for depth
+  gsap.fromTo(img,
+    { yPercent:-8 },
+    { yPercent:8, ease:'none',
+      scrollTrigger:{ trigger:sec, start:'top bottom', end:'bottom top', scrub:true }
+    }
+  );
+  // Scale: image breathes in as section arrives
+  gsap.fromTo(img,
+    { scale:1.1 },
+    { scale:1.0, ease:'power2.out',
+      scrollTrigger:{ trigger:sec, start:'top 85%', end:'center 35%', scrub:1.8 }
+    }
+  );
+}
+
+/* ── Hero Three.js star field ── */
+function initHeroCanvas(){
+  const canvas = document.getElementById('hero-canvas');
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:false, alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const scene  = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+  camera.position.z = 5;
+
+  const n = 2600, pos = new Float32Array(n*3);
+  for(let i=0;i<n*3;i++) pos[i]=(Math.random()-0.5)*28;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({
+    color:0xf5e6c8, size:0.038, transparent:true, opacity:0.65
+  })));
+
+  function resize(){
+    const w=canvas.parentElement.clientWidth, h=canvas.parentElement.clientHeight;
+    renderer.setSize(w,h); camera.aspect=w/h; camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize',resize); resize();
+
+  let t=0;
+  (function loop(){
+    t+=0.0004;
+    scene.children[0].rotation.y = t + window._mx*0.12;
+    scene.children[0].rotation.x = window._my*0.07;
+    renderer.render(scene,camera);
+    requestAnimationFrame(loop);
+  })();
+}
+</script>
+</body>
+</html>
